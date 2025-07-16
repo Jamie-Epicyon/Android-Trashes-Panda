@@ -1,94 +1,140 @@
+Trashes Panda — Android Trash Database & EXIF Metadata Merger  
+Updated July 16 2025
 
-A quick readme written mostly by AI, will update when possible
+================================================================================
+🆕 What’s New?
 
-Update: 2025-07-16 I've replaced pillow with exiftool and made changes to the GUI. This is slower but the exif data is more complete.  I'll provide a better readme at some point.
+- EXE Provided! Use the ready-to-run Windows executable (.exe)—no Python installation required.
+- EXIF extraction powered by ExifTool for richer, more accurate metadata on modern Android images (HEIC, TIFF, etc).
+- Modern, responsive GUI: Progress bars, log console, and ZIP/folder discovery.
+- Handles ZIPs and folders: Finds images anywhere—directly or embedded in ZIPs.
+- No DB changes: *Does not* alter your original trash.db.
+- Modular output: CSVs for EXIF metadata and DB records, cleanly merged.
 
+================================================================================
+📂 How Android's trash.db Works (Why This Matters)
 
+Many Android devices (especially Samsung Gallery and others) use a hidden trash system instead of immediately deleting photos. Here’s what happens:
 
-Trashes Panda — Android Trash Database Parser & EXIF Extractor
-===============================================================
+1. When you delete a photo:
+   - The image is moved to a system trash/recycle folder (sometimes only accessible via root or backup).
+   - Record(s) about deletions are written to a SQLite database called trash.db.
 
+2. About trash.db:
+   - Typically located at:
+     /data/user/<userid>/com.samsung.android.providers.trash/databases/trash.db
+   - Contains a table (often called trashes) with columns like:
+     - title: The original filename of the deleted image (e.g. IMG_20230101_123000.jpg)
+     - date_deleted: Unix timestamp (in milliseconds) when the photo was deleted
+     - (Sometimes more, depending on Android version or app variation)
+   - Sometimes, no other image metadata is stored—this is why it’s crucial to supplement with EXIF from the actual files.
+
+3. Why extra EXIF metadata is needed:
+   - trash.db doesn’t tell you when the photo was originally taken—only when it was deleted.
+   - Photos’ original timestamps, camera details, and other information are embedded inside the media files themselves, in a header called EXIF.
+
+================================================================================
 🧠 What This Tool Does
-----------------------
-Trashes Panda is a forensic utility designed to extract and enrich metadata from Android's trash system. It processes ZIP archives containing the `trash.db` database and associated image files (typically from Samsung Gallery or similar apps), and outputs a detailed CSV report with timestamps, EXIF data, and file metadata.
 
-📁 How Android's `trash.db` Works
----------------------------------
-On many Android devices (especially Samsung), when a user deletes a photo, it is not immediately removed from storage. Instead:
+Trashes Panda lets you:
+- Analyze both: trash.db deletion records and the actual EXIF/photo metadata of the trashed images.
+- Finds images even if they are embedded in ZIP backup archives or scattered in folders.
 
-- The image is moved to a hidden trash folder.
-- Metadata about the deleted file is stored in a SQLite database called `trash.db`.
-- This database is typically located at:
-  /data/user/<userid>/com.samsung.android.providers.trash/databases/trash.db
+🏆 How EXIF Parsing is Performed
+- Uses ExifTool (industry gold standard) for pulling out:
+    - DateCreated (original capture timestamp)
+    - DateModified
+    - Camera Model
+    - Extension
+    - ...and more
+- Automatically locates media files (JPG, PNG, HEIC, TIFF) either directly in folders or inside ZIPs extracted from the trashes folder (with full path/ZIP context for chain-of-custody).
+- Parses EXIF directly from every image it can find; output is comprehensive and handles more types and variants than past Python-only solutions (e.g., Pillow).
 
-The `trash.db` file contains a table (usually named `trashes`) with columns like:
+================================================================================
+🚦 How to Use
 
-- `title`: the original filename of the deleted image
-- `date_deleted`: the timestamp (in Unix epoch milliseconds) when the file was deleted
+1. Installation & Prerequisites
 
-However, this database alone does not contain full metadata about the image itself — such as when it was taken or which device captured it.
+- Windows users: You can use the provided .exe! No need for Python.
+    - Just double-click exif_trashes_merger.exe to launch the GUI.
+- If using Python source: Requires Python 3.7+, will auto-download ExifTool if missing.
+- No manual ExifTool install is needed.
 
-🔍 What This Tool Adds
-----------------------
-Trashes Panda enhances the raw database by:
+2. Workflow
 
-1. 🧠 Parsing timestamps from the `title` field  
-   - Recognizes formats like `YYYYMMDD_HHMMSS`, `YYYY-MM-DD-HHMMSS`, and Unix timestamps
-   - Converts them into human-readable local time
+1. Place your trash.db and/or ZIP(s)/images in a convenient folder (USB, export, cloud download, etc).
+2. Run the program:
+   - .exe: Double-click exif_trashes_merger.exe
+   - Python script: python exif_trashes_merger.py
+3. In the GUI:
+   - Browse to the target folder containing trash.db and images or ZIPs.
+   - Confirm detected image files count.
+   - Click:
+     - 🛠️ Extract Metadata — finds images (even those inside ZIPs), extracts metadata using ExifTool.
+     - 📊 Export trash.db — saves records from the trashes table to CSV.
+     - 🔗 Merge Outputs — links/photo titles from DB to extracted EXIF: outputs a single, rich merged CSV.
+     - 🧪 Open ExifTool Folder — for troubleshooting if ExifTool is required.
+   - All output files go into the output/ subfolder.
 
-2. 📸 Extracting EXIF metadata from image files  
-   - Reads the `DateTimeOriginal` tag to determine when the photo was taken
-   - Extracts the `Model` tag to identify the camera or device used
+================================================================================
+📄 Output File Overview
 
-3. 🧾 Enriching the database with:
-   - `converted_title`: parsed timestamp from filename
-   - `exif_created`: timestamp from EXIF metadata
-   - `file_type`: file extension (e.g. jpg, png)
-   - `file_path`: full path to the matched image
-   - `camera_model`: device model from EXIF
+| File                   | Description                                                  |
+|------------------------|-------------------------------------------------------------|
+| output_metadata.csv    | All image EXIF data (incl. capture date, camera, extension) |
+| output_trashdb.csv     | Records extracted from the trashes SQLite table             |
+| merged_output.csv      | All-in-one view: links DB entries to media/EXIF metadata    |
 
-4. 📤 Exporting all enriched data to a CSV file (`output.csv`) for analysis
+Merged Output Columns
 
-🖥️ How to Use
---------------
-1. Launch the GUI by running:
-   python trashes_panda_gui.py
+| Column                | Description                                                      |
+|-----------------------|------------------------------------------------------------------|
+| title                 | Filename, as listed in the trash.db (IMG_...jpg etc.)           |
+| Unixepoch Timestamp   | Raw deletion time (from trash.db)                               |
+| Deleted_CST           | Deletion time (converted to your PC local time)                 |
+| DateCreated           | When photo/video was taken (EXIF DateTimeOriginal)              |
+| DateModified          | When the file was last changed                                  |
+| Camera                | Camera/device model name                                        |
+| Extension             | File extension (JPG, HEIC, PNG, etc)                            |
+| FilePath              | Where the file was found; shows ZIP/relative path where relevant|
 
-2. Click "Browse" and select a folder containing ZIP files extracted from an Android device.
+================================================================================
+❓ Why Use EXIFTool (and this utility)
 
-3. The tool will:
-   - Scan each ZIP for a valid `trash.db` and image files
-   - Extract and process the data
-   - Output a file called `output.csv` in the same directory
+- Comprehensive: Handles modern formats and variants (HEIC, 10-bit JPEG, etc) that older Python libraries miss.
+- Forensically robust: Parses deeply into nested folders and ZIPs; keeps evidence chains intact by showing origin.
+- No accidental DB changes: Analysis-only; no schema changes that could pop data out of typical forensics toolchains.
 
-📄 Output Columns
------------------
-| Column               | Description                                      |
-|----------------------|--------------------------------------------------|
-| Original Title       | Filename from the trash.db                       |
-| Extracted Timestamps | Parsed from filename (if available)              |
-| EXIF Created         | Timestamp from EXIF metadata                     |
-| File Type            | File extension (e.g. jpg, png)                   |
-| Camera Model         | Device model from EXIF metadata                  |
-| Unixepoch Timestamp  | Deletion time from trash.db (raw)                |
-| Deleted_CST          | Deletion time converted to local time            |
-| File Path            | Path to the matched image file                   |
+================================================================================
+⚙️ Example Use Cases
 
-🛠️ Requirements
----------------
-- Python 3.7+
-- Pillow (for EXIF parsing):
-  pip install pillow
+- Build a timeline: See exactly when photos were shot, when trashed, and by what device.
+- Forensics: Correlate user deletion actions with actual file history; detect if photos are pre/post-dated.
+- Investigate multi-device or cloud photo deletion (when photos come from different camera models).
 
-📦 Optional: Bundle as .exe
----------------------------
-You can use PyInstaller to create a standalone Windows executable:
+================================================================================
+🧑‍💻 Credits
 
-  pyinstaller --onefile --windowed --icon=panda.ico trashes_panda_gui.py
+- ExifTool by Phil Harvey (https://exiftool.org/)
 
-🧪 Forensic Use Cases
----------------------
-- Recover deleted photo metadata from Android devices
-- Correlate deletion times with original capture times
-- Identify the device used to take a photo
-- Audit user activity from extracted backups
+================================================================================
+🙏 Special Thanks
+
+A special thanks to:
+- Charlie (northloopforensics on GitHub: https://github.com/northloopforensics)
+- Matt (dabeersboys on GitHub: https://github.com/dabeersboys)
+
+for their support, feedback, and contributions that improved this project.
+
+================================================================================
+📝 Changelog (2025-07-16)
+
+- EXE now included for Windows (no setup needed!)
+- EXIF parsing now with ExifTool for maximum file/metadata coverage.
+- Major GUI improvements: better logs, progress, modular process.
+- Output is now split into clear single-purpose files, fully merged for timeline use.
+- Database is read-only for maximum evidence safety.
+
+================================================================================
+Questions, forensic requests, or enhancements?
+File an issue or contact us—we welcome professional casework and suggestions!

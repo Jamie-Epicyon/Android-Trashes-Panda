@@ -1,4 +1,7 @@
+
 A quick readme written mostly by AI, will update when possible
+
+Update: 2025-07-16 I've replaced pillow with exiftool and made changes to the GUI. This is slower but the exif data is more complete.  I'll provide a better readme at some point.
 
 
 

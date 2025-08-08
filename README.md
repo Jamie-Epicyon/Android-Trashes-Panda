@@ -1,4 +1,7 @@
 Trashes Panda — Android Trash Database & EXIF Metadata Merger  
+
+8/8/2025 New version is up for update to exif tool, more stable version forthcoming
+
 Updated July 16 2025
 
 ================================================================================
